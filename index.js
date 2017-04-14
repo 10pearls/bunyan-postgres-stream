@@ -67,11 +67,15 @@ class LogStream extends Writable {
     });
     query = `${query.slice(0, -1)}) values (`;
     columnNames.forEach(column => {
-      if(_.get(content,this.schema[column], null)){
-        query = `${query} '${_.get(content, this.schema[column], null)}',`
+      let data = _.get(content,this.schema[column], null);
+      if(data){
+        if(typeof data === 'object'){
+          data = JSON.stringify(data);
+        }
+        query = `${query} '${ data }',`
       }
     });
-    query = `${query.slice(0, -1)} )`
+    query = `${query.slice(0, -1)} )`;
 
     return query;
   }
