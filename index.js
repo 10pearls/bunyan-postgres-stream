@@ -23,7 +23,6 @@ class LogStream extends Writable {
 
     this.tableName = options.tableName;
     this.schema = options.schema;
-    console.log(this.schema);
   }
 
   _writeKnex (chunk, env, cb) {
