@@ -1,5 +1,6 @@
 const Writable = require('stream').Writable
-const pg = require('pg')
+const pg = require('pg');
+const _ = require('lodash');
 
 class LogStream extends Writable {
   constructor (options) {
@@ -20,25 +21,68 @@ class LogStream extends Writable {
       this.pool = new pg.Pool(this.connection)
     }
 
-    this.tableName = options.tableName
+    this.tableName = options.tableName;
+    this.schema = options.schema;
+    console.log(this.schema);
   }
 
   _writeKnex (chunk, env, cb) {
-    const content = JSON.parse(chunk.toString())
-    this.knex.insert({
-      name: content.name,
-      level: content.level,
-      hostname: content.hostname,
-      msg: content.msg,
-      pid: content.pid,
-      time: content.time,
-      content: JSON.stringify(content)
-    })
-    .into(this.tableName)
-    .asCallback(cb)
+    const content = JSON.parse(chunk.toString());
+    this.knex.insert(this._logColumns(content))
+      .into(this.tableName)
+      .asCallback(cb)
   }
 
+  _logColumns(content) {
+    if(this.schema){
+      let schemaObject = {};
+      let columnName = Object.keys(this.schema);
+      columnName.forEach(column => {
+        if(content[column]){
+          schemaObject[column] = _.get(content, this.schema[column], null)
+        }
+      });
+
+      return schemaObject
+    }
+    else{
+      return {
+        name: content.name,
+        level: content.level,
+        hostname: content.hostname,
+        msg: content.msg,
+        pid: content.pid,
+        time: content.time,
+        content: JSON.stringify(content)
+      }
+    }
+  }
+
+  _generateRawQuery(content) {
+    let query = `insert into ${this.tableName} (`;
+    let columnNames = Object.keys(this.schema);
+    columnNames.forEach(column => {
+      if(content[column]){
+        query = `${query}${column},`
+      }
+    });
+    query = `${query.slice(0, -1)}) values (`;
+    columnNames.forEach(column => {
+      if(content[column]){
+        query = `${query} '${_.get(content, this.schema[column], null)}',`
+      }
+    });
+    query = `${query.slice(0, -1)} )`
+
+    return query;
+  }
+
+
   writePgPool (client, content) {
+    if(this.schema){
+      return client.query(
+        this._generateRawQuery(content))
+    }
     return client.query(`
       insert into ${this.tableName}
         (name, level, hostname, msg, pid, time, content)
@@ -62,7 +106,7 @@ class LogStream extends Writable {
         client.release()
       })
     })
-    .catch(err => cb(err))
+      .catch(err => cb(err))
   }
 
   end (cb) {
@@ -76,3 +120,5 @@ class LogStream extends Writable {
 module.exports = (options = {}) => {
   return new LogStream(options)
 }
+
+
