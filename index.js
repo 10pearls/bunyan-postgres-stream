@@ -38,7 +38,7 @@ class LogStream extends Writable {
       let schemaObject = {};
       let columnName = Object.keys(this.schema);
       columnName.forEach(column => {
-        if(content[column]){
+        if(_.get(content,this.schema[column], null)){
           schemaObject[column] = _.get(content, this.schema[column], null)
         }
       });
@@ -62,13 +62,13 @@ class LogStream extends Writable {
     let query = `insert into ${this.tableName} (`;
     let columnNames = Object.keys(this.schema);
     columnNames.forEach(column => {
-      if(content[column]){
+      if(_.get(content,this.schema[column], null)){
         query = `${query}${column},`
       }
     });
     query = `${query.slice(0, -1)}) values (`;
     columnNames.forEach(column => {
-      if(content[column]){
+      if(_.get(content,this.schema[column], null)){
         query = `${query} '${_.get(content, this.schema[column], null)}',`
       }
     });
