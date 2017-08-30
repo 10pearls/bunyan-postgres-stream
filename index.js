@@ -52,7 +52,7 @@ class LogStream extends Writable {
         msg: content.msg,
         pid: content.pid,
         time: content.time,
-        content: JSON.stringify(content)
+        content: JSON.stringify(content).replace(/\'\'?/g, `''`)
       }
     }
   }
@@ -70,7 +70,7 @@ class LogStream extends Writable {
       let data = _.get(content,this.schema[column], null);
       if(data){
         if(typeof data === 'object'){
-          data = JSON.stringify(data);
+          data = JSON.stringify(data).replace(/\'\'?/g, `''`);
         }
         query = `${query} '${ data }',`
       }
